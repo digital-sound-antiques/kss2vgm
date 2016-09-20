@@ -1,0 +1,16 @@
+{
+	"folders":
+	[
+		{
+			"path": "."
+		}
+	],
+	"settings":
+	{
+		"cc_include_options":
+		[
+			"-I${project_path}/modules/libkss/src",
+			"-I${project_path}/modules/libkss/modules"
+		]
+	}
+}

@@ -1,0 +1,4 @@
+[submodule "modules/libkss"]
+	path = modules/libkss
+	url = https://github.com/digital-sound-antiques/libkss.git
+	branch = develop
