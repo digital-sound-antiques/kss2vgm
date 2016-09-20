@@ -25,6 +25,8 @@ $ cmake ..
 $ make
 ```
 
+For windows, open and build `kss2vgm.vcxproj` instead of run `make`.
+
 # Usage
 
 ```
