@@ -22,10 +22,8 @@ $ cd kss2vgm
 $ mkdir build
 $ cd build
 $ cmake ..
-$ make
+$ cmake --build .
 ```
-
-For windows, open and build `kss2vgm.vcxproj` instead of run `make`.
 
 # Usage
 
