@@ -140,6 +140,11 @@ static void write_command(FILE *fp, uint8_t *buf, uint32_t len) {
 
 static uint8_t cmd_buf[8];
 
+static void write_eos_command(FILE *fp) {
+  cmd_buf[0] = 0x66;
+  write_command(fp, cmd_buf, 1);
+}
+
 static void iowrite_handler(void *context, uint32_t a, uint32_t d) {
 
   FILE *fp = (FILE *)context;
@@ -324,6 +329,7 @@ int main(int argc, char **argv) {
 
   KSSPLAY_delete(kssplay);
   KSS_delete(kss);
+  write_eos_command(fp);
 
   create_vgm_header(header, sizeof(header), data_size, total_samples);
   fseek(fp, 0, SEEK_SET);
