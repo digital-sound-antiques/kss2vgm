@@ -51,10 +51,10 @@ static void create_vgm_header(uint8_t *buf, uint32_t header_size, uint32_t data_
 
   DWORD(buf + 0x34, header_size - 0x34);    // VGM data offset
   DWORD(buf + 0x58, use_opl ? 3579545 : 0); // Y8950
-  DWORD(buf + 0x74, use_psg ? 1789750 : 0); // AY8910
+  DWORD(buf + 0x74, use_psg ? 1789773 : 0); // AY8910
   buf[0x78] = 0x00;                         // AY8910 chiptype
   buf[0x79] = 0x00;
-  DWORD(buf + 0x9C, use_scc ? 1789750 : 0); // SCC
+  DWORD(buf + 0x9C, use_scc ? 1789773 : 0); // SCC
 }
 
 typedef struct {
