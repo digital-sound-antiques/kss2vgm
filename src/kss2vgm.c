@@ -16,7 +16,7 @@ static uint32_t opll_adr = 0, psg_adr = 0, opl_adr = 0;
 static uint32_t total_samples = 0;
 static uint32_t data_size = 0;
 static uint32_t last_write_clock = 0;
-static int use_sng = 0, use_opll = 0, use_psg = 0, use_scc = 0, use_opl = 0;
+static int use_sng = 0, use_opll = 0, use_psg = 0, use_scc = 0, use_scc_plus = 0, use_opl = 0;
 
 static void WORD(uint8_t *buf, uint32_t data) {
   buf[0] = data & 0xff;
@@ -54,7 +54,8 @@ static void create_vgm_header(uint8_t *buf, uint32_t header_size, uint32_t data_
   DWORD(buf + 0x74, use_psg ? 1789773 : 0); // AY8910
   buf[0x78] = 0x00;                         // AY8910 chiptype
   buf[0x79] = 0x00;
-  DWORD(buf + 0x9C, use_scc ? 1789773 : 0); // SCC
+  DWORD(buf + 0x9C, use_scc_plus ? (0x80000000|1789773) : (use_scc ? 1789773 : 0) ); // SCC
+
 }
 
 typedef struct {
@@ -264,7 +265,7 @@ static void scc_plus_handler(FILE *fp, uint32_t a, uint32_t d) {
   }
 
   if (0 <= port) {
-    use_scc = 1;
+    use_scc_plus = 1;
     cmd_buf[0] = 0xD2;
     cmd_buf[1] = port;
     cmd_buf[2] = offset;
