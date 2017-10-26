@@ -4,7 +4,7 @@ KSS2VGM is a libkss-based VGM (.vgm) file generator for various MSX music format
 Supported input formats are .kss, .mgs, .bgm, .opx, .mpk, .mbm.
 
 Note that KSS2VGM is still an experimental, minimum command-line options are available
-and output .vgm file is not optimized.
+and output .vgm file is not optimized. Y8950 adpcm is not supported yet.
 
 # TL;DR
 
