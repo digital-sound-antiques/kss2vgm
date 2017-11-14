@@ -32,6 +32,7 @@ static void DWORD(uint8_t *buf, uint32_t data) {
 
 static void create_vgm_header(uint8_t *buf, uint32_t header_size, uint32_t data_size, uint32_t total_samples) {
 
+  uint8_t opl_data_offset = 0x00;
   memset(buf, 0, header_size);
   memcpy(buf, "Vgm ", 4);
 
@@ -49,16 +50,18 @@ static void create_vgm_header(uint8_t *buf, uint32_t header_size, uint32_t data_
   WORD(buf + 0x2A, 16);     // SN76489 shift register width
   WORD(buf + 0x2B, 0);      // SN76489 flags
 
-  DWORD(buf + 0x34, header_size - 0x0f - 0x34);    // VGM data offset
+  if (use_opl) opl_data_offset = 0x0f;
+
+  DWORD(buf + 0x34, header_size - opl_data_offset - 0x34);    // VGM data offset
   DWORD(buf + 0x58, use_opl ? 3579545 : 0); // Y8950
   DWORD(buf + 0x74, use_psg ? 1789773 : 0); // AY8910
   buf[0x78] = 0x00;                         // AY8910 chiptype
   buf[0x79] = 0x00;
   DWORD(buf + 0x9C, use_scc_plus ? (0x80000000|1789773) : (use_scc ? 1789773 : 0) ); // SCC
 
-  if (use_opl) DWORD(buf + 0x100, 0x08886667); else DWORD(buf + 0x100, 0x00000000);
+  DWORD(buf + 0x100, 0x08886667);
   DWORD(buf + 0x104, 0x00000000);
-  if (use_opl) DWORD(buf + 0x108, 0x80); else DWORD(buf + 0x108, 0x00);
+  DWORD(buf + 0x108, 0x80);
   DWORD(buf + 0x109, 0x00000000);
   DWORD(buf + 0x10d, 0x0000);
 }
