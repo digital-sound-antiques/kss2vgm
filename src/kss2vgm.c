@@ -49,13 +49,18 @@ static void create_vgm_header(uint8_t *buf, uint32_t header_size, uint32_t data_
   WORD(buf + 0x2A, 16);     // SN76489 shift register width
   WORD(buf + 0x2B, 0);      // SN76489 flags
 
-  DWORD(buf + 0x34, header_size - 0x34);    // VGM data offset
+  DWORD(buf + 0x34, header_size - 0x0f - 0x34);    // VGM data offset
   DWORD(buf + 0x58, use_opl ? 3579545 : 0); // Y8950
   DWORD(buf + 0x74, use_psg ? 1789773 : 0); // AY8910
   buf[0x78] = 0x00;                         // AY8910 chiptype
   buf[0x79] = 0x00;
   DWORD(buf + 0x9C, use_scc_plus ? (0x80000000|1789773) : (use_scc ? 1789773 : 0) ); // SCC
 
+  if (use_opl) DWORD(buf + 0x100, 0x08886667); else DWORD(buf + 0x100, 0x00000000);
+  DWORD(buf + 0x104, 0x00000000);
+  if (use_opl) DWORD(buf + 0x108, 0x80); else DWORD(buf + 0x108, 0x00);
+  DWORD(buf + 0x109, 0x00000000);
+  DWORD(buf + 0x10d, 0x0000);
 }
 
 typedef struct {
@@ -285,7 +290,7 @@ static void memwrite_handler(void *context, uint32_t a, uint32_t d) {
 int main(int argc, char **argv) {
 
   int i, t;
-  uint8_t header[0x100];
+  uint8_t header[0x10f];
   FILE *fp;
 
   if (argc < 2) {
