@@ -146,6 +146,25 @@ static void write_eos_command(FILE *fp) {
   write_command(fp, cmd_buf, 1);
 }
 
+static void write_data_block(FILE *fp, uint8_t data_type, uint32_t block_size, uint8_t *data) {
+  cmd_buf[0] = 0x67;
+  cmd_buf[1] = 0x66;
+  cmd_buf[2] = data_type;
+  DWORD(cmd_buf+3,  block_size);
+  write_command(fp, cmd_buf, 7);
+  fwrite(data, block_size, 1, fp);
+  data_size += block_size;
+}
+
+static void write_y8950_dummy_pcm_data_block(FILE *fp) {
+  uint8_t buf[8];
+  DWORD(buf, 0x00008000); // y8950 pcm ram/rom size
+  DWORD(buf+4, 0x00000000); // start address of data
+  write_data_block(fp, 0x88, 8, buf);
+}
+
+static int is_y8950_adpcm_used = 0;
+
 static void iowrite_handler(void *context, uint32_t a, uint32_t d) {
 
   FILE *fp = (FILE *)context;
@@ -166,6 +185,10 @@ static void iowrite_handler(void *context, uint32_t a, uint32_t d) {
     cmd_buf[1] = opl_adr;
     cmd_buf[2] = d;
     write_command(fp, cmd_buf, 3);
+    if(!is_y8950_adpcm_used && d == 0x0f) {
+      is_y8950_adpcm_used = 1;
+      write_y8950_dummy_pcm_data_block(fp);
+    }
   } else if (a == 0xa0) { // PSG(A)
     use_psg = 1;
     psg_adr = d;
