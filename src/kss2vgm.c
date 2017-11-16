@@ -11,12 +11,50 @@
   "  -o<file>       Specify the output filename.\n"
 
 #define MAX_PATH 512
+#define DATA_ALLOC_UNIT (1024*1024)
 
 static uint32_t opll_adr = 0, psg_adr = 0, opl_adr = 0;
 static uint32_t total_samples = 0;
-static uint32_t data_size = 0;
+
+typedef struct {
+  uint8_t *buffer;
+  uint32_t allocated;
+  uint32_t size;
+} DataArray;
+
+static void data_array_write(DataArray *array, uint8_t *buf, uint32_t size) {
+  while (array->allocated <= array->size + size) {
+    array->allocated += DATA_ALLOC_UNIT;
+    array->buffer = realloc(array->buffer, array->allocated);
+  }
+  memcpy(array->buffer + array->size, buf, size);
+  array->size += size;
+}
+
+static DataArray ini_data;
+static DataArray vgm_data;
+
 static uint32_t last_write_clock = 0;
 static int use_sng = 0, use_opll = 0, use_psg = 0, use_scc = 0, use_scc_plus = 0, use_opl = 0;
+static int use_y8950_adpcm = 0;
+
+static void vgm_putc(uint8_t d) {
+  data_array_write(&vgm_data, &d, 1);  
+}
+
+static void vgm_write(uint8_t *buf, uint32_t size) {
+  data_array_write(&vgm_data, buf, size);
+}
+
+static void ini_write(uint8_t *buf, uint32_t size) {
+  data_array_write(&ini_data, buf, size);
+}
+
+static void init_data_array(DataArray *array) {
+  array->allocated = DATA_ALLOC_UNIT;
+  array->buffer = malloc(array->allocated);
+  array->size = 0;
+}
 
 static void WORD(uint8_t *buf, uint32_t data) {
   buf[0] = data & 0xff;
@@ -125,49 +163,26 @@ static Options parse_options(int argc, char **argv) {
   return options;
 }
 
-static void write_command(FILE *fp, uint8_t *buf, uint32_t len) {
+static void write_command(uint8_t *buf, uint32_t len) {
 
   uint32_t d = (total_samples - last_write_clock);
   if(0 < d) {
-    fputc(0x61, fp);
-    fputc((d & 0xff), fp);
-    fputc((d >> 8) & 0xff, fp);
+    vgm_putc(0x61);
+    vgm_putc(d & 0xff);
+    vgm_putc((d >> 8) & 0xff);
     last_write_clock = total_samples;
-    data_size += 3;
   }
-  fwrite(buf, len, 1, fp);
-  data_size += len;
+  vgm_write(buf, len);
 }
 
 static uint8_t cmd_buf[8];
 
-static void write_eos_command(FILE *fp) {
+static void write_eos_command() {
   cmd_buf[0] = 0x66;
-  write_command(fp, cmd_buf, 1);
+  write_command(cmd_buf, 1);
 }
-
-static void write_data_block(FILE *fp, uint8_t data_type, uint32_t block_size, uint8_t *data) {
-  cmd_buf[0] = 0x67;
-  cmd_buf[1] = 0x66;
-  cmd_buf[2] = data_type;
-  DWORD(cmd_buf+3,  block_size);
-  write_command(fp, cmd_buf, 7);
-  fwrite(data, block_size, 1, fp);
-  data_size += block_size;
-}
-
-static void write_y8950_dummy_pcm_data_block(FILE *fp) {
-  uint8_t buf[8];
-  DWORD(buf, 0x00008000); // y8950 pcm ram/rom size
-  DWORD(buf+4, 0x00000000); // start address of data
-  write_data_block(fp, 0x88, 8, buf);
-}
-
-static int is_y8950_adpcm_used = 0;
 
 static void iowrite_handler(void *context, uint32_t a, uint32_t d) {
-
-  FILE *fp = (FILE *)context;
 
   if (a == 0x7c || a == 0xf0) { // YM2413(A)
     use_opll = 1;
@@ -176,19 +191,18 @@ static void iowrite_handler(void *context, uint32_t a, uint32_t d) {
     cmd_buf[0] = 0x51;
     cmd_buf[1] = opll_adr;
     cmd_buf[2] = d;
-    write_command(fp, cmd_buf, 3);
+    write_command(cmd_buf, 3);
   } else if (a == 0xC0) {
     use_opl = 1;
     opl_adr = d;
+    if(d == 0x0f) {
+      use_y8950_adpcm = 1;
+    }
   } else if (a == 0xC1) {
     cmd_buf[0] = 0x5C;
     cmd_buf[1] = opl_adr;
     cmd_buf[2] = d;
-    write_command(fp, cmd_buf, 3);
-    if(!is_y8950_adpcm_used && d == 0x0f) {
-      is_y8950_adpcm_used = 1;
-      write_y8950_dummy_pcm_data_block(fp);
-    }
+    write_command(cmd_buf, 3);
   } else if (a == 0xa0) { // PSG(A)
     use_psg = 1;
     psg_adr = d;
@@ -196,20 +210,20 @@ static void iowrite_handler(void *context, uint32_t a, uint32_t d) {
     cmd_buf[0] = 0xA0;
     cmd_buf[1] = psg_adr;
     cmd_buf[2] = d;
-    write_command(fp, cmd_buf, 3);
+    write_command(cmd_buf, 3);
   } else if (a == 0x7E || a == 0x7F) { // SN76489
     use_sng = 1;
     cmd_buf[0] = 0x50;
     cmd_buf[1] = d;
-    write_command(fp, cmd_buf, 2);
+    write_command(cmd_buf, 2);
   } else if (a == 0x06) { // GG Stereo
     cmd_buf[0] = 0x4F;
     cmd_buf[1] = d;
-    write_command(fp, cmd_buf, 2);
+    write_command(cmd_buf, 2);
   }
 }
 
-static void scc_handler(FILE *fp, uint32_t a, uint32_t d) {
+static void scc_handler(uint32_t a, uint32_t d) {
 
   int port = 0, offset = 0;
   a = a & 0xFF;
@@ -248,11 +262,11 @@ static void scc_handler(FILE *fp, uint32_t a, uint32_t d) {
     cmd_buf[1] = port;
     cmd_buf[2] = offset;
     cmd_buf[3] = d;
-    write_command(fp, cmd_buf, 4);
+    write_command(cmd_buf, 4);
   }
 }
 
-static void scc_plus_handler(FILE *fp, uint32_t a, uint32_t d) {
+static void scc_plus_handler(uint32_t a, uint32_t d) {
   int port = 0, offset = 0;
   a = a & 0xFF;
   if (a <= 0x7F) {
@@ -293,16 +307,52 @@ static void scc_plus_handler(FILE *fp, uint32_t a, uint32_t d) {
     cmd_buf[1] = port;
     cmd_buf[2] = offset;
     cmd_buf[3] = d;
-    write_command(fp, cmd_buf, 4);
+    write_command(cmd_buf, 4);
   }
 }
 
 static void memwrite_handler(void *context, uint32_t a, uint32_t d) {
   if (0x9800 <= a && a <= 0x98FF) {
-    scc_handler((FILE *)context, a, d);
+    scc_handler(a, d);
   } else if (0xB800 <= a && a <= 0xB8FF) {
-    scc_plus_handler((FILE *)context, a, d);
+    scc_plus_handler(a, d);
   }
+}
+
+static uint8_t y8950_adpcm_init[15] = {
+  0x67, 0x66, // Data Block Command
+  0x88, // Block Type: Y8950 DELTA PCM ROM/RAM
+  0x08,0x00,0x00,0x00, // Size of The Block
+  0x00,0x80,0x00,0x00, // ROM/RAM Image Size
+  0x00,0x00,0x00,0x00  // Start Offset of Data
+};
+
+static void print_info() {
+  printf("I/O Access Found: ");
+
+  if (use_psg) {
+    printf("AY-3-8910 ");
+  }
+  if (use_scc_plus) {
+    printf("K052539(SCC+) ");    
+  } else if (use_scc) {
+    printf("K051649(SCC) ");
+  }
+  if (use_opll) {
+    printf("YM2413 ");    
+  }
+  if (use_opl) {
+    if (use_y8950_adpcm) {
+      printf("Y8950+ADPCM ");
+    } else {
+      printf("Y8950 ");
+    }
+  }
+  if (use_sng) {
+    printf("SN76489 ");
+  }
+
+  printf("\n");
 }
 
 int main(int argc, char **argv) {
@@ -323,6 +373,9 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
+  init_data_array(&ini_data);
+  init_data_array(&vgm_data);
+
   KSS *kss = KSS_load_file(opt.input);
 
   if ((kss = KSS_load_file(opt.input)) == NULL) {
@@ -330,17 +383,9 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  /* Open output VGM file */
-  if ((fp = fopen(opt.output, "wb")) == NULL) {
-    fprintf(stderr, "Can't open %s\n", opt.output);
-    exit(1);
-  }
-
-  fseek(fp, sizeof(header), SEEK_SET); /* SKIP HEADER SIZE */
-
   KSSPLAY *kssplay = KSSPLAY_new(44100, 1, 16);
-  KSSPLAY_set_iowrite_handler(kssplay, fp, iowrite_handler);
-  KSSPLAY_set_memwrite_handler(kssplay, fp, memwrite_handler);
+  KSSPLAY_set_iowrite_handler(kssplay, NULL, iowrite_handler);
+  KSSPLAY_set_memwrite_handler(kssplay, NULL, memwrite_handler);
   KSSPLAY_set_data(kssplay, kss);
   KSSPLAY_reset(kssplay, opt.song_num, 0);
 
@@ -353,11 +398,28 @@ int main(int argc, char **argv) {
 
   KSSPLAY_delete(kssplay);
   KSS_delete(kss);
-  write_eos_command(fp);
+  write_eos_command();
 
-  create_vgm_header(header, sizeof(header), data_size, total_samples);
-  fseek(fp, 0, SEEK_SET);
+  /* Open output VGM file */
+  if ((fp = fopen(opt.output, "wb")) == NULL) {
+    fprintf(stderr, "Can't open %s\n", opt.output);
+    exit(1);
+  }
+
+  if (use_y8950_adpcm) {
+    ini_write(y8950_adpcm_init, 15);
+  }
+
+  print_info();
+
+  create_vgm_header(header, sizeof(header), ini_data.size + vgm_data.size, total_samples);
   fwrite(header, sizeof(header), 1, fp);
+  if (0 < ini_data.size) {
+    fwrite(ini_data.buffer, ini_data.size, 1, fp);
+  }
+  if (0 < vgm_data.size) {
+    fwrite(vgm_data.buffer, vgm_data.size, 1, fp);
+  }
   fclose(fp);
 
   return 0;
