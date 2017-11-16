@@ -127,16 +127,16 @@ static Options parse_options(int argc, char **argv) {
 
 static void write_command(FILE *fp, uint8_t *buf, uint32_t len) {
 
-    uint32_t d = (total_samples - last_write_clock);
-	if(0 < d) {
-    	fputc(0x61, fp);
-        fputc((d & 0xff), fp);
-        fputc((d >> 8) & 0xff, fp);
-        last_write_clock = total_samples;
-        data_size += 3;
-    }
-  	fwrite(buf, len, 1, fp);
-  	data_size += len;
+  uint32_t d = (total_samples - last_write_clock);
+  if(0 < d) {
+    fputc(0x61, fp);
+    fputc((d & 0xff), fp);
+    fputc((d >> 8) & 0xff, fp);
+    last_write_clock = total_samples;
+    data_size += 3;
+  }
+  fwrite(buf, len, 1, fp);
+  data_size += len;
 }
 
 static uint8_t cmd_buf[8];
