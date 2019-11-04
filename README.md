@@ -28,10 +28,10 @@ $ cmake --build .
 # Usage
 
 ```
-Usage: kss2vgm [Options] kssfile 
-Options: 
+Usage: kss2vgm [Options] kssfile
+Options:
   -p<play_time>  Specify song length in second to convert.
   -s<song_num>   Internal song number to play.
   -o<file>       Specify the output filename.
+  -v<num>        Volume modifier: Volume = 2^(num/32).
 ```
-
