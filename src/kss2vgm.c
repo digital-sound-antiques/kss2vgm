@@ -226,7 +226,7 @@ static void iowrite_handler(void *context, uint32_t a, uint32_t d) {
 
 static void scc_handler(uint32_t a, uint32_t d) {
 
-  int port = 0, offset = 0;
+  int port = -1, offset = 0;
   a = a & 0xFF;
   if (a <= 0x7F) {
     port = 0; // wave
@@ -258,7 +258,14 @@ static void scc_handler(uint32_t a, uint32_t d) {
   }
 
   if (0 <= port) {
-    use_scc = 1;
+    if (use_scc == 0) {
+      cmd_buf[0] = 0xd2;
+      cmd_buf[1] = 3;
+      cmd_buf[2] = 0;
+      cmd_buf[3] = 0x1f;
+      write_command(cmd_buf, 4);
+      use_scc = 1;
+    }
     cmd_buf[0] = 0xD2;
     cmd_buf[1] = port;
     cmd_buf[2] = offset;
@@ -268,7 +275,7 @@ static void scc_handler(uint32_t a, uint32_t d) {
 }
 
 static void scc_plus_handler(uint32_t a, uint32_t d) {
-  int port = 0, offset = 0;
+  int port = -1, offset = 0;
   a = a & 0xFF;
   if (a <= 0x7F) {
     port = 0; // wave[0-4]
@@ -303,7 +310,14 @@ static void scc_plus_handler(uint32_t a, uint32_t d) {
   }
 
   if (0 <= port) {
-    use_scc_plus = 1;
+    if (use_scc_plus == 0) {
+      cmd_buf[0] = 0xd2;
+      cmd_buf[1] = 3;
+      cmd_buf[2] = 0;
+      cmd_buf[3] = 0x1f;
+      write_command(cmd_buf, 4);
+      use_scc_plus = 1;
+    }
     cmd_buf[0] = 0xD2;
     cmd_buf[1] = port;
     cmd_buf[2] = offset;
