@@ -167,12 +167,18 @@ static Options parse_options(int argc, char **argv) {
 static void write_command(uint8_t *buf, uint32_t len) {
 
   uint32_t d = (total_samples - last_write_clock);
+  while (65535 < d) {
+    vgm_putc(0x61);
+    vgm_putc(0xff);
+    vgm_putc(0xff);
+    d -= 65535;
+  }
   if (0 < d) {
     vgm_putc(0x61);
     vgm_putc(d & 0xff);
     vgm_putc((d >> 8) & 0xff);
-    last_write_clock = total_samples;
   }
+  last_write_clock = total_samples;
   vgm_write(buf, len);
 }
 
