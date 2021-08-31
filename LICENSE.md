@@ -1,5 +1,5 @@
 ## Caveat
-The [kss-drivers] and [libkss] submodules on which kss2vgm depends DOES NOT follow this license. 
+The [kss-drivers] and [libkss] submodules that kss2vgm depends on are not compliant with this license. 
 See README and LICENSE of submodules.
 
 ## KSS2VGM License 
