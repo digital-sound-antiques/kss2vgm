@@ -6,10 +6,11 @@
 #define HLPMSG                                                                                                         \
   "Usage: kss2vgm [Options] kssfile \n"                                                                                \
   "Options: \n"                                                                                                        \
-  "  -p<play_time>  Specify song length in second to convert.\n"                                                       \
+  "  -p<play_time>  Specify play length in second to convert.\n"                                                       \
   "  -s<song_num>   Internal song number to play.\n"                                                                   \
   "  -o<file>       Specify the output filename.\n"                                                                    \
-  "  -v<num>        Volume modifier: Volume = 2^(num/32).\n"
+  "  -v<num>        Volume modifier: Volume = 2^(num/32).\n"                                                           \
+  "  -l<num>        Maximum loop number, works only with .mgs file (default: 0 = infinite).\n"
 
 #define MAX_PATH 512
 #define DATA_ALLOC_UNIT (1024 * 1024)
@@ -101,6 +102,7 @@ typedef struct {
   char output[MAX_PATH + 4];
   int help;
   int error;
+  int margin;
 } Options;
 
 static Options parse_options(int argc, char **argv) {
@@ -110,7 +112,7 @@ static Options parse_options(int argc, char **argv) {
 
   options.song_num = 0;
   options.play_time = 60;
-  options.loop_num = 1;
+  options.loop_num = 0;
   options.input[0] = '\0';
   options.output[0] = '\0';
   options.help = 0;
@@ -414,6 +416,12 @@ int main(int argc, char **argv) {
     for (i = 0; i < 44100; i++) {
       KSSPLAY_calc_silent(kssplay, 1);
       total_samples++;
+      if (KSSPLAY_get_stop_flag(kssplay)) {
+        break;
+      }
+      if ((opt.loop_num > 0 && KSSPLAY_get_loop_count(kssplay) >= opt.loop_num)) {
+        break;
+      }
     }
   }
 
