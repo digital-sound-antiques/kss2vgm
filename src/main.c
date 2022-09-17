@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
   }
 
   KSS2VGM *kss2vgm = KSS2VGM_new();
-  KSS2VGM_Result *res = KSS2VGM_kss2vgm(kss2vgm, kss, opt.play_time, opt.song_num, opt.loop_num, opt.volume);
+  KSS2VGM_Result *res = KSS2VGM_kss2vgm(kss2vgm, kss, opt.play_time * 1000, opt.song_num, opt.loop_num, opt.volume);
 
   /* Open output VGM file */
   if ((fp = fopen(opt.output, "wb")) == NULL) {
