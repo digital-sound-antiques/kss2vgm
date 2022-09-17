@@ -24,12 +24,10 @@ endif(MSVC)
 
 add_subdirectory(modules/libkss) 
 
-# file(GLOB SOURCES src/*.c src/**/*.c)
-
 include_directories(modules/libkss/src)
 include_directories(modules/libkss/modules)
 
-add_executable(kss2vgm src/main.c src/kss2vgm.c)
+add_executable(kss2vgm src/main.c)
 
 if(NOT CMAKE_COMPILER_IS_GNUCC)
 	target_link_libraries(kss2vgm kss)
