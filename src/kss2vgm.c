@@ -37,6 +37,7 @@ static DataArray ini_data;
 static DataArray vgm_data;
 
 static uint32_t last_write_clock = 0;
+static int scc_initialized = 0;
 static int use_sng = 0, use_opll = 0, use_psg = 0, use_scc = 0, use_scc_plus = 0, use_opl = 0;
 static int use_y8950_adpcm = 0;
 
@@ -242,6 +243,7 @@ static void scc_handler(uint32_t a, uint32_t d) {
   } else if (a <= 0x89) {
     port = 1; // freq
     offset = a - 0x80;
+    if (d != 0x00) use_scc = 1;
   } else if (a <= 0x8E) {
     port = 2; // volume
     offset = a - 0x8A;
@@ -251,6 +253,7 @@ static void scc_handler(uint32_t a, uint32_t d) {
   } else if (a == 0x90 && a <= 0x99) {
     port = 1; // freq
     offset = a - 0x90;
+    if (d != 0x00) use_scc = 1;
   } else if (a == 0x9A && a <= 0x9E) {
     port = 2; // volume
     offset = a - 0x9A;
@@ -266,13 +269,13 @@ static void scc_handler(uint32_t a, uint32_t d) {
   }
 
   if (0 <= port) {
-    if (use_scc == 0) {
-      cmd_buf[0] = 0xd2;
+    if (scc_initialized == 0) {
+      cmd_buf[0] = 0xD2;
       cmd_buf[1] = 3;
       cmd_buf[2] = 0;
       cmd_buf[3] = 0x1f;
       write_command(cmd_buf, 4);
-      use_scc = 1;
+      scc_initialized = 1;
     }
     cmd_buf[0] = 0xD2;
     cmd_buf[1] = port;
@@ -294,6 +297,7 @@ static void scc_plus_handler(uint32_t a, uint32_t d) {
   } else if (a <= 0xA9) {
     port = 1; // freq
     offset = a - 0xA0;
+    if (d != 0x00) use_scc_plus = 1;
   } else if (0xAA <= a && a <= 0xAE) {
     port = 2; // volume
     offset = a - 0xAA;
@@ -303,6 +307,7 @@ static void scc_plus_handler(uint32_t a, uint32_t d) {
   } else if (a == 0xB0 && a <= 0xB9) {
     port = 1; // freq
     offset = a - 0xB0;
+    if (d != 0x00) use_scc_plus = 1;
   } else if (a == 0xBA && a <= 0xBE) {
     port = 2; // volume
     offset = a - 0xBA;
@@ -318,13 +323,13 @@ static void scc_plus_handler(uint32_t a, uint32_t d) {
   }
 
   if (0 <= port) {
-    if (use_scc_plus == 0) {
-      cmd_buf[0] = 0xd2;
+    if (scc_initialized == 0) {
+      cmd_buf[0] = 0xD2;
       cmd_buf[1] = 3;
       cmd_buf[2] = 0;
       cmd_buf[3] = 0x1f;
       write_command(cmd_buf, 4);
-      use_scc_plus = 1;
+      scc_initialized = 1;
     }
     cmd_buf[0] = 0xD2;
     cmd_buf[1] = port;
